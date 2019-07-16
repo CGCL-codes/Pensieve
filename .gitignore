@@ -1,0 +1,16 @@
+.vscode/*
+bin/*
+apps/*.h
+apps/*.hpp
+apps/decoder.C
+apps/encoder.C
+apps/*~
+*~
+run.sh
+result/*
+tmp/*
+*.txt
+nohup.out
+gmon.out
+
+
