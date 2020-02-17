@@ -1,7 +1,7 @@
 Pensieve: Skewness-Aware Version Switching for Efficient Graph Processing
 ======================
 
-we propose Pensieve, a skewness-aware multi-version graph processing system. Two factors contribute to the efficiency of Pensieve. First, Pensieve leverages a differentiated graph storage strategy that stores low degree vertices using copy-based scheme while stores high degree ones using delta-based scheme. Such a design achieves a good trade-off between storage cost and version switching time for multi-version graph processing. Second, the Pensieve graph storage exploits the time locality of graph version access and designs a novel last-root version switching scheme, which significantly improves the access efficiency for recent versions. We implement Pensieve on top of Ligra, and conduct comprehensive experiments to evaluate the performance of this design using large-scale datasets collected from real world systems. The results show that Pensieve substantially outperforms state-of-the-art designs in terms of memory consumption and version switching time.
+We propose Pensieve, a skewness-aware multi-version graph processing system. Two factors contribute to the efficiency of Pensieve. First, Pensieve leverages a differentiated graph storage strategy that stores low degree vertices using copy-based scheme while stores high degree ones using delta-based scheme. Such a design achieves a good trade-off between storage cost and version switching time for multi-version graph processing. Second, the Pensieve graph storage exploits the time locality of graph version access and designs a novel last-root version switching scheme, which significantly improves the access efficiency for recent versions. We implement Pensieve on top of Ligra, and conduct comprehensive experiments to evaluate the performance of this design using large-scale datasets collected from real world systems. The results show that Pensieve substantially outperforms state-of-the-art designs in terms of memory consumption and version switching time.
 
 Introduction
 --------
@@ -32,12 +32,6 @@ Pensieve provides multi-version graph storage for a multi-version graph processi
 Pensieve stores graph data and delta separately. Both graph storage and delta storage are divided into two part: high degree vertices in graph storage correspond to delta-based delta format and low degree vertices to copy-based delta. 
 Pensieve has two control components, including vertex splitter and version controller. The vertex splitter processes new deltas and stores them in different delta storage, while the version controller captures the relationship among versions. When the graph processing system needs a specific version, the version controller responds to the request and dispatches the task to delta storage and graph storage to perform version switching.
 
-Organization
---------
-
-The code for Pensieve is built based on the Ligra project. User of Pensieve should previously browser the requirement of Ligra first.
-
-The code for Pensieve is located in the ligra/ directory, The code for applications is in the apps/ directory. The inputs/ and utils/ directory contains example graph and graph utilities, which are hardly any different from what in Ligra project,
 
 Compilation
 --------
@@ -61,24 +55,6 @@ $ make clean #removes all executables
 $ make cleansrc #removes all executables and linked files from the ligra/ directory
 ```
 
-Running code in Pensieve
--------
-The applications take the input graph as input as well as an optional
-flag "-s" to indicate a symmetric graph.  Symmetric graphs should be
-called with the "-s" flag for better performance. For example:
-
-```
-$ ./BFS -s ../inputs/rMatGraph_J_5_100
-$ ./BellmanFord -s ../inputs/rMatGraph_WJ_5_100
-``` 
-
-For BFS, BC and BellmanFord, one can also pass the "-r" flag followed
-by an integer to indicate the source vertex.  rMat graphs along with
-other graphs can be generated with the graph generators in the utils/
-directory.  By default, the applications are run four times, with
-times reported for the last three runs. This can be changed by passing
-the flag "-rounds" followed by an integer indicating the number of
-timed runs.
 
 Input Format for Pensieve
 -----------
@@ -87,15 +63,15 @@ Pensieve currently support unweighted graphs.
 
 The input format of unweighted graphs should be the following formats.
 
-1) The adjacency graph format from the Problem Based Benchmark Suite
- (http://www.cs.cmu.edu/~pbbs/benchmarks/graphIO.html). The adjacency
- graph format starts with a sequence of offsets one for each vertex,
- followed by a sequence of directed edges ordered by their source
- vertex. The offset for a vertex i refers to the location of the start
- of a contiguous block of out edges for vertex i in the sequence of
- edges. The block continues until the offset of the next vertex, or
- the end if i is the last vertex. All vertices and offsets are 0 based
- and represented in decimal. The specific format is as follows:
+The adjacency graph format from the Problem Based Benchmark Suite
+(http://www.cs.cmu.edu/~pbbs/benchmarks/graphIO.html). The adjacency
+graph format starts with a sequence of offsets one for each vertex,
+followed by a sequence of directed edges ordered by their source
+vertex. The offset for a vertex i refers to the location of the start
+of a contiguous block of out edges for vertex i in the sequence of
+edges. The block continues until the offset of the next vertex, or
+the end if i is the last vertex. All vertices and offsets are 0 based
+and represented in decimal. The specific format is as follows:
 
 AdjacencyGraph  
 &lt;n>  
@@ -110,76 +86,6 @@ AdjacencyGraph
 &lt;e(m-1)>  
 
 This file is represented as plain text.
-
-Graph Utilities
----------
-
-There are some graph utilities from Ligra
-
-Several graph utilities are provided in the utils/ directory and can
-be compiled using "make".
-
-### Graph Generators
-
-Three graph generators from the [PBBS
-project](http://www.cs.cmu.edu/~pbbs) are provided. **rMatGraph**
-generators an rMat graph (described by Chakrabarti, Zhan and Faloutsos
-in *SDM '04*). The required parameters are the number of vertices and
-the output file. By default the number of directed edges is set to 10
-times the number of vertices, and can be changed by specifying the
-"-m" flag followed by the number of edges. The default parameters are
-(*a=.5*, *b=.1*, *c=.1* and *d=.3*), and can be changed by specifying
-the "-a", "-b", and "-c" flags each followed by the desired
-probability (*d=1-a-b-c*). The "-s" flag followed by an integer
-specifies the random seed (default value of 1).  **randLocalGraph**
-generators a random graph, and the required parameters are the number
-of vertices (10 times the number of edges are generated by default,
-and can be changed with the "-m" flag) and the output file.
-**gridGraph** takes the same parameters generates a 2 or 3 dimensional
-graph, specified by the "-d" flag (default value is 2). The grid
-graphs are symmetrized, and the rMat and random graphs are not
-symmetrized but can be symmetrized by passing the "-s" flag.  For
-graphs that are symmetrized, the total number of edges can be up to
-twice the number specified.
-
-Examples:
-```
-$ ./rMatGraph 10000000 rMat_10000000
-$ ./rMatGraph -a .57 -b .19 -c .19 10000000 rMat_10000000 #modify rMat parameters
-$ ./randLocalGraph 10000000 rand_10000000
-$ ./randLocalGraph -m 50000000 10000000 rand_10000000 #modify edge count
-$ ./gridGraph 10000000 2Dgrid_10000000
-$ ./gridGraph -d 3 10000000 3Dgrid_10000000 
-```
-
-### Graph Converters
-
-**SNAPtoAdj** converts a graph in [SNAP
-format](http://snap.stanford.edu/data/index.html) and converts it to Ligra's
-adjacency graph format. The first required parameter is the input
-(SNAP) file name and second required parameter is the output (Ligra)
-file name. The "-s" flag may be used to symmetrize the input
-file. This converter works for any format that lists the two endpoints
-of each edge separated by white space per line, with lines starting
-with '#' ignored.
-
-**adjGraphAddWeights** adds random integer weights in the range
-[1,...,*log<sub>2</sub>*(number of vertices)] to an unweighted Ligra
-graph in adjacency graph format, and takes as input the input file
-name followed by the output file name.
-
-**adjToBinary** converts a Ligra graph in adjacency graph format to
-binary format. The arguments are the adjacency graph file name
-followed by the 3 binary file names (.idx, .adj and .config). For a
-weighted graph, pass the "-w" flag before the file names.
-
-Examples:
-```
-$ ./SNAPtoAdj SNAPfile LigraFile
-$ ./adjGraphAddWeights unweightedLigraFile weightedLigraFile
-$ ./adjToBinary rMatGraph_J_5_100 rMatGraph_J_5_100.idx rMatGraph_J_5_100.adj rMatGraph_J_5_100.config 
-$ ./adjToBinary -w rMatGraph_WJ_5_100 rMatGraph_WJ_5_100.idx rMatGraph_WJ_5_100.adj rMatGraph_WJ_5_100.config 
-```
 
 
 Ligra Data Structure and Functions
