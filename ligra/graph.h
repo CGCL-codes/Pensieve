@@ -86,6 +86,20 @@ public:
     }
   }
 
+  // graph(graph<vertex>& ga) {
+  //   version = ga.get_version();
+  //   max_version = ga.max_version;
+  //   n = ga.n;
+  //   m = ga.m;
+  //   transposed = ga.transposed;
+  //   _is_hybrid = ga._is_hybrid;
+  //   uintE* flags = nullptr;
+  //   D = nullptr;
+    
+  //   auto start = ga.getvertex();
+  //   V.assign(start, start+n);
+  // }
+
   graph(vector<vertex>& _V, long _n, long _m, Deletable* _D) : V(_V), n(_n), m(_m),
   D(_D), flags(NULL), transposed(0), version(0) {}
 
@@ -117,7 +131,8 @@ public:
 
   inline vertex * getvertex(uintT j) {
     if (j >= n) {
-      resize(j+1);
+      // resize(j+1);
+      return &V[n-1];
     }
     return &V[j];
   }
@@ -210,6 +225,12 @@ public:
   void shrink() {
     for (auto i: V) {
       i.shrink();
+    }
+  }
+
+  void sort() {
+    for (auto & v: V) {
+      v.sort();
     }
   }
 };

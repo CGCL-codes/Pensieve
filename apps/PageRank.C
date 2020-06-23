@@ -68,7 +68,7 @@ struct PR_Vertex_Reset {
 
 template <class vertex>
 void Compute(graph<vertex>& GA, commandLine P) {
-  long maxIters = P.getOptionLongValue("-maxiters",100);
+  long maxIters = P.getOptionLongValue("-maxiters",1);
   const intE n = GA.n;
   const double damping = 0.85, epsilon = 0.0000001;
   

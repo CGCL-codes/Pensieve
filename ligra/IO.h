@@ -42,6 +42,7 @@
 #include "get_mem.h"
 #include "delta.h"
 #include "myutil.h"
+#include "threadpool.h"
 using namespace std;
 
 typedef pair<uintE,uintE> intPair;
@@ -321,12 +322,16 @@ graph<HVertex> readHGraphFromFile(char *fname, bool hybrid=true, int _offset_wal
     exit(0);
   }
 
+
   uintT* offsets = newA(uintT,n);
   uintE* edges = newA(uintE,m);
-  {parallel_for(long i=0; i < n; i++) offsets[i] = atol(W.Strings[i + 3]);}
-  {parallel_for(long i=0; i<m; i++) {
-    edges[i] = atol(W.Strings[i+n+3]);
-  }}
+  auto p = W.Strings;
+  // {parallel_for(long i=0; i < n; i++) offsets[i] = atol(W.Strings[i + 3]);}
+  concurrent_foreach(n, [=](long i){offsets[i] = atol(p[i+3]);});
+  concurrent_foreach(m, [=](long i){edges[i] = atol(p[i+n+3]);});
+  // {parallel_for(long i=0; i<m; i++) {
+  //   edges[i] = atol(W.Strings[i+n+3]);
+  // }}
   
   W.del();
   
@@ -342,7 +347,8 @@ graph<HVertex> readHGraphFromFile(char *fname, bool hybrid=true, int _offset_wal
     offset_wall = 0;
   }
 
-  cout << "get wall " << offset_wall << endl;
+  // cout << "get wall " << offset_wall << endl;
+  // cout << "get threshold " << get_offset_wall(offsets, n, m) << endl;
   vector<HVertex> v;
 
   // unordered_map<uintE, bool> hdv;

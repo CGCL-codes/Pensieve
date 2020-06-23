@@ -39,7 +39,7 @@ struct distOrder {
 
   static int get(int index, int want_max=60) {
     if (index >= DIST_SIZE || index < 0) {
-      cout << "index out of range " << endl;
+      cout << "index out of range " << index << endl;
       return 0;
     }
     if (want_max == 60) {
@@ -50,7 +50,7 @@ struct distOrder {
   }
 };
 
-int distOrder::order[DIST_SIZE]{60, 59, 54, 57, 55, 58, 55, 52, 58, 49, 
-                                43, 56, 43, 49, 52, 58, 38, 45, 59, 52};
+int distOrder::order[DIST_SIZE]{60, 59, 54, 43, 55, 58, 55, 52, 58, 49, 
+                                56, 56, 43, 49, 52, 58, 38, 45, 59, 52};
 
 #endif

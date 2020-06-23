@@ -80,4 +80,15 @@ void print_mem_without_trim(const int pid) {
     printf("current mem using : %u kb\n", get_proc_mem(pid));
 }
 
+unsigned int get_proc_mem_trim(const int pid) {
+    malloc_trim(0);
+    return get_proc_mem(pid);
+}
+
+unsigned int get_proc_mem_trim(const char * process_name) {
+    malloc_trim(0);
+    int pid = get_pid(process_name);
+    return get_proc_mem_trim(pid);
+}
+
 #endif

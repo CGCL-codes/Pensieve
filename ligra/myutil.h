@@ -43,6 +43,18 @@ public:
     return std::chrono::duration_cast<milli_>(tp.time_since_epoch()).count();
   }
 
+  double elapsed_and_refresh() {
+    auto ret = elapsed();
+    start();
+    return ret;
+  }
+
+  double elapsed_and_refresh_milli() {
+    auto ret = elapsed_milli();
+    start();
+    return ret;
+  }
+
 private:
   using clock_ = std::chrono::high_resolution_clock;
   using nano_ = std::chrono::nanoseconds;

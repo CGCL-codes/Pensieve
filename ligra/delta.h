@@ -26,6 +26,7 @@ struct delta {
   delta(int _vs, int _ve, vector<uintE>& v, vector<uintE>& p, vector<uintE>& dap) :
     vs(_vs), ve(_ve), vertexs(v), positions(p), dstAndPos(dap) {}
 
+
   delta(delta_log<vertex> &dlg, graph<vertex> & graph, bool origin = true) {
     if (graph.get_version() != dlg.ver) {
       cout  << "error in generate delta from deltalog, with version " 
@@ -102,6 +103,36 @@ struct delta {
     ve = ver_end;
     del_size = -1;
     del_size = get_del_number();
+  }
+
+  delta(const char * filename) {
+    ifstream infile;
+    infile.open(filename);
+    if (!infile.is_open()) {
+      cout << "fail to open file when try to get delta." << endl;
+      cout << filename << endl;
+      abort();
+    }
+    string header;
+    infile >> header;
+    if (header != "PENSIEVE_DELTA_FILE") {
+      cout << "bad format. expect pensieve delta file, find " << header << endl;
+    }
+    infile >> vs >> ve;
+    int a, b, c;
+    infile >> a >> b >> c;
+    vertexs.resize(a);
+    positions.resize(b);
+    dstAndPos.resize(c);
+    for (auto i=0; i<a; i++) {
+      infile>> vertexs[i];
+    }
+    for (auto i=0; i<b; i++) {
+      infile>> positions[i];
+    }
+    for (auto i=0; i<c; i++) {
+      infile>> dstAndPos[i];
+    }
   }
 
   void gen_hybrid(delta_log<vertex> &log, graph<vertex> &graph, bool origin = true) {
@@ -226,6 +257,31 @@ struct delta {
       for (auto j=mid; j<end; j++) {
         outfile << from << " " << dstAndPos[j] << " " << -1 << endl;
       }
+    }
+    outfile.close();
+  }
+
+  void write_pensieve_delta(const char * filename) {
+    ofstream outfile;
+    outfile.open(filename);
+    if (!outfile.is_open()) {
+      cout << "fail to open file " << filename << endl;
+      abort(); 
+    }
+    cout << "begin to save file " << filename << endl;
+    outfile << "PENSIEVE_DELTA_FILE" << endl;
+    outfile << vs << " " << ve << endl;
+    outfile << vertexs.size() << endl;
+    outfile << positions.size() << endl;
+    outfile << dstAndPos.size() << endl;
+    for (auto i: vertexs) {
+      outfile << i << endl;
+    }
+    for (auto i: positions) {
+      outfile << i << endl;
+    }
+    for (auto i: dstAndPos) {
+      outfile << i << endl;
     }
     outfile.close();
   }
@@ -356,6 +412,12 @@ struct delta {
     positions.shrink_to_fit();
     dstAndPos.shrink_to_fit();
   }
+
+  void clear() {
+    vector<uintE>().swap(vertexs);
+    vector<uintE>().swap(positions);
+    vector<uintE>().swap(dstAndPos);
+  }
 };
 
 template<class vertex>
@@ -412,19 +474,27 @@ int apply(graph<vertex> & ga, delta<vertex> & da) {
   // version check
   if (ga.get_version() != da.vs) {
     std::cout << "version mismatch, delta apply failed, nothing changed" << endl;
+    cout << "version = " << ga.get_version() << " and delta " << da.vs << " " << da.ve << endl;
     return -1;
   }
   // cout << "apply from " << da.vs << " to " << da.ve << endl;
-
+  // int count_copy;
+  // int count_add, count_del;
+  // double time_copy, time_delta;
+  // ChronoTimer cter;
   if (ga.is_hybrid()) {
     auto start = HVertex::carray.get_start_offset_of_version(ga.get_version());
     auto end = HVertex::carray.get_start_offset_of_version(da.ve);
+    // count_copy = end - start;
     for (auto i=start; i<end; i++) {
       ga.getvertex(HVertex::carray.vertexs[i])->forward();
     }
   }
+  // time_copy = cter.elapsed();
   
-  int count = (int)da.vertexs.size();
+  int count = (int) da.vertexs.size();
+  // cter.start();
+  
   // print_mem("BellmanFord");
   for(int i=0; i<count; i++) {
     // get target vertex
@@ -447,6 +517,12 @@ int apply(graph<vertex> & ga, delta<vertex> & da) {
       vtmp->push_back(it+b, it+e);
     }
   }
+  // time_delta = cter.elapsed();
+  // cout << "apply finish" << endl;
+  // cout << "copy_size " << count_copy << " with time " << time_copy << endl;
+  // cout << "copy : " << time_copy/count_copy << endl;
+  // cout << "delta size " << da.get_add_size() << " with time " << time_delta << endl;
+  // cout << "delta : " << time_delta / (da.get_add_size()) << endl;
   
   ga.set_version(da.ve);
   // graph.update_m();
@@ -459,25 +535,32 @@ template <class vertex>
 int revert(graph<vertex> &ga, delta<vertex> &da) {
   // version check
   if (ga.get_version() != da.ve) {
-    std::cout << "version mismatch, delta apply failed, nothing changed" << endl;
+    std::cout << "version mismatch, delta revert failed, nothing changed" << endl;
+    cout << "version = " << ga.get_version() << " and delta " << da.vs << " " << da.ve << endl;
     return -1;
   }
 
+  // int count_copy;
+  // int count_add, count_del;
+  // double time_copy, time_delta;
+
   // cout << "revert from " << da.vs << " to " << da.ve << endl;
   // cout << "dirty data before " << ga.accessAllEdges() << endl;
-  ChronoTimer cter;
+  // ChronoTimer cter;
   if (ga.is_hybrid()) {
       // high_degree_vertex dont reponse this call and wait for following delta information
     int start = (int) HVertex::carray.get_start_offset_of_version(da.vs);
     auto end = HVertex::carray.get_start_offset_of_version(ga.get_version());
     // cout << start << " " << end << " " << HVertex::carray.vertexs.size() << endl;
-    
+    // count_copy = end - start;
     for (int i=end-1; i>=start; i--) {
       ga.getvertex(HVertex::carray.vertexs[i])->backward();
     }
   }
-
+  // time_copy = cter.elapsed();
+  
   int count = (int) da.vertexs.size();
+  // cter.start();
   // cout << "after ld " << cter.elapsed() << endl;
   {parallel_for(int i=0; i<count; i++) {
   // {for(int i=0; i<count; i++) {
@@ -495,7 +578,12 @@ int revert(graph<vertex> &ga, delta<vertex> &da) {
       vtmp->index_addtion(da.dstAndPos[j], da.dstAndPos[j+1]);
     }
   }}
+  // time_delta = cter.elapsed();
   // cout << "revert finish" << endl;
+  // cout << "copy_size " << count_copy << " with time " << time_copy << endl;
+  // cout << "copy : " << time_copy/count_copy << endl;
+  // cout << "delta size " << da.get_add_size()  << " with time " << time_delta << endl;
+  // cout << "delta : " << time_delta / (da.get_add_size()) << endl;
   // cout << "after index add " << cter.elapsed() << endl;
   ga.set_version(da.vs);
   int add = ((int)(da.get_add_size()) - (int)(da.get_del_number()));

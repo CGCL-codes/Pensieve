@@ -81,14 +81,14 @@ void Compute(graph<vertex>& GA, commandLine P) {
   intE* Degrees = newA(intE,n);
   {parallel_for(long i=0;i<n;i++) {
       coreNumbers[i] = 0;
-      Degrees[i] = GA.V[i].getOutDegree();
+      Degrees[i] = GA.getvertex(i)->getOutDegree();
     }}
   long largestCore = -1;
   for (long k = 1; k <= n; k++) {
     while (true) {
       vertexSubset toRemove 
-	= vertexFilter(Frontier,Deg_LessThan_K<vertex>(GA.V,Degrees,coreNumbers,k));
-      vertexSubset remaining = vertexFilter(Frontier,Deg_AtLeast_K<vertex>(GA.V,Degrees,k));
+	= vertexFilter(Frontier,Deg_LessThan_K<vertex>(GA.getvertex(),Degrees,coreNumbers,k));
+      vertexSubset remaining = vertexFilter(Frontier,Deg_AtLeast_K<vertex>(GA.getvertex(),Degrees,k));
       Frontier.del();
       Frontier = remaining;
       if (0 == toRemove.numNonzeros()) { // fixed point. found k-core
@@ -96,7 +96,7 @@ void Compute(graph<vertex>& GA, commandLine P) {
         break;
       }
       else {
-	edgeMap(GA,toRemove,Update_Deg(Degrees), -1, no_output);
+	edgeMap(&GA,toRemove,Update_Deg(Degrees), -1, no_output);
 	toRemove.del();
       }
     }
