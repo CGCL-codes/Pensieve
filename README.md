@@ -26,7 +26,7 @@ we present Pensieve, a novel skewness-aware multi-version graph processing syste
 
 Structure of Pensieve
 --------
-![Pensieve Architecture](https://github.com/Pensieve-code/Pensieve/raw/master/tutorial/Pensieve_arch.png)
+![Pensieve Architecture](https://github.com/CGCL-codes/Pensieve/raw/master/image/Pensieve_arch.png)
 
 Pensieve provides multi-version graph storage for a multi-version graph processing system. 
 Pensieve stores graph data and delta separately. Both graph storage and delta storage are divided into two part: high degree vertices in graph storage correspond to delta-based delta format and low degree vertices to copy-based delta. 
@@ -40,7 +40,7 @@ Compilation is done from within the apps/ directory.
 
 Compilers
 
-* g++ &gt;= 5.3.0 
+* g++ \<= 5.3.0 
 
 After the appropriate environment variables are set, to compile,
 simply run
