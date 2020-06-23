@@ -91,7 +91,7 @@ struct BC_Back_Vertex_F {
 
 template <class vertex>
 void Compute(graph<vertex>& GA, commandLine P) {
-  long start = P.getOptionLongValue("-r",0);
+  long start = P.getOptionLongValue("-r",13);
   long n = GA.n;
 
   fType* NumPaths = newA(fType,n);
@@ -109,7 +109,7 @@ void Compute(graph<vertex>& GA, commandLine P) {
   long round = 0;
   while(!Frontier.isEmpty()){ //first phase
     round++;
-    vertexSubset output = edgeMap(GA, Frontier, BC_F(NumPaths,Visited));
+    vertexSubset output = edgeMap(&GA, Frontier, BC_F(NumPaths,Visited));
     vertexMap(output, BC_Vertex_F(Visited)); //mark visited
     Levels.push_back(output); //save frontier onto Levels
     Frontier = output;
@@ -131,7 +131,7 @@ void Compute(graph<vertex>& GA, commandLine P) {
   //tranpose graph
   GA.transpose();
   for(long r=round-2;r>=0;r--) { //backwards phase
-    edgeMap(GA, Frontier, BC_Back_F(Dependencies,Visited), -1, no_output);
+    edgeMap(&GA, Frontier, BC_Back_F(Dependencies,Visited), -1, no_output);
     Frontier.del();
     Frontier = Levels[r]; //gets frontier from Levels array
     //vertex map to mark visited and update Dependencies scores

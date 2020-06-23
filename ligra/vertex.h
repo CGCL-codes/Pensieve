@@ -2,6 +2,7 @@
 #define VERTEX_H
 
 #include <chrono>
+#include <algorithm>
 #include "vertexSubset.h"
 #include <vector>
 #include "myutil.h"
@@ -283,6 +284,12 @@ struct HVertex
   void shrink() {
     if (is_high_degree_vertex()) {
       outNeighbors.shrink_to_fit();
+    }
+  }
+
+  void sort() {
+    if (_is_high_degree_vertex) {
+      std::sort(outNeighbors.begin(), outNeighbors.end());
     }
   }
 

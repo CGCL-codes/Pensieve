@@ -67,10 +67,10 @@ template <class data, class vertex, class VS, class F>
 vertexSubsetData<data> edgeMapDense(graph<vertex> * GA, VS& vertexSubset, F &f, const flags fl) {
   using D = tuple<bool, data>;
   long n = GA->n;
-  ChronoTimer cter;
+  // ChronoTimer cter;
   // cout << cter.elapsed_milli() << endl;
   // cout << should_output(fl) << endl;
-  // vertex *G = GA->getvertex();
+  vertex *G = GA->getvertex();
   if (should_output(fl)) {
     D* next = newA(D, n);
     auto g = get_emdense_gen<data>(next);
@@ -84,10 +84,14 @@ vertexSubsetData<data> edgeMapDense(graph<vertex> * GA, VS& vertexSubset, F &f, 
     return vertexSubsetData<data>(n, next);
   } else {
     auto g = get_emdense_nooutput_gen<data>();
-    parallel_for (long v=0; v<n; v++) {
+    // parallel_for (long v=0; v<n; v++) {
+    for (long v=0; v<n; v++) {
       if (f.cond(v)) {
         GA->getvertex(v)->decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
       }
+      // if (!(v%1000)) {
+      //   cout << v << endl;
+      // }
     }
     return vertexSubsetData<data>(n);
   }
@@ -376,6 +380,7 @@ vertexSubsetData<data> edgeMapData(graph<vertex>& GA, VS &vs, F f,
     cout << "edgeMap: Sizes Don't match" << endl;
     abort();
   }
+  // cout << "vs size " << vs.size() << endl;
   if (vs.size() == 0) return vertexSubsetData<data>(numVertices);
   vs.toSparse();
   uintT* degrees = newA(uintT, m);
@@ -399,7 +404,7 @@ vertexSubsetData<data> edgeMapData(graph<vertex>& GA, VS &vs, F f,
 
   uintT outDegrees = sequence::plusReduce(degrees, m);
   // cout << cter.elapsed_milli() << endl;
-  // cout << m + outDegrees << " > " << threshold << (fl&dense_forward) << endl;
+  // cout << m  << " " << outDegrees << " > " << threshold << " " << (fl&dense_forward) << endl;
   if (outDegrees == 0) return vertexSubsetData<data>(numVertices);
   if (m + outDegrees > threshold) {
     vs.toDense();
@@ -622,6 +627,13 @@ int parallel_main(int argc, char* argv[]) {
   bool version_graph = P.getOptionValue("-g");
   int delta_num = P.getOptionIntValue("-n", 9);
   int delta_type = P.getOptionIntValue("-type", 0);
+  bool test_disk = P.getOptionValue("-disk");
+  bool test_sort = P.getOptionValue("-sort");
+  bool gen_delta = P.getOptionValue("-generate");
+  bool test_memory = P.getOptionValue("-memory");
+  bool need_replica = P.getOptionValue("-replica");
+  bool test_minitime = P.getOptionValue("-minitime");
+  bool test_copy = P.getOptionValue("-copy");
   double add_rate = P.getOptionDoubleValue("-r", 2);
   double delta_rate = P.getOptionDoubleValue("-f", 2);
   int offset_wall = P.getOptionIntValue("-w", 0);
@@ -631,24 +643,25 @@ int parallel_main(int argc, char* argv[]) {
 
   string exe_file = split_last(argv[0], '/');
   int pid = get_pid(exe_file.c_str());
-  cout << exe_file << " " << pid << endl;
+  // cout << exe_file << " " << pid << endl;
 
   cout.setf(ios::fixed, ios::floatfield);
 
   string filename(iFile);
-  // string basedir = get_basedir(filename, delta_rate, add_rate, delta_type);
-  string basedir = "/public/home/tangwei/graphdata/flickr/finaltreetest/";
+  // basedir is the dir of delta files, please replace this value with your path.
+  string basedir = get_basedir(filename, delta_rate, add_rate, delta_type);
+  cout << "load delta file from " << basedir<< endl;
 
   /////  code for generate delta
+  // please DO NOT use it unless you know what you are doing
+  if (gen_delta)
 {
-
-  /* 
-  int delta_step = 1;
+  int delta_step = 0;
   graph<symmetricVertex> G = readGraphFromFile<symmetricVertex>(iFile);
   vector<delta_log<symmetricVertex>> deltalogs;
   vector<delta<symmetricVertex>> deltas;
   // graph<symmetricVertex> ga = readGraphFromFile<symmetricVertex>(iFile);
-  string savedir = "/public/home/tangwei/graphdata/flickr/finaltree/";
+  string savedir = "/public/home/tangwei/graphdata/twitter/diskdelta/";
   // string savedir;
   /* 
   if (delta_rate == 2) {
@@ -681,15 +694,16 @@ int parallel_main(int argc, char* argv[]) {
     cout << "file " << iFile << " dont have related delta file, please reach admin for help" << endl;
     return 0;
   }
-  *
-  // 
-  
+  */
+  //
+
   for (auto i=1; i<=delta_num; i++) {
+    cout << i << " " << time(nullptr) << endl;
     uintT new_from = get_new_from(i-1, delta_step);
     cout << new_from << " to " << i << endl;
     vector<uintT> path = get_revert_path(deltas, G.get_version(), new_from);
     for (auto j : path) {
-      auto tmp = deltas[j];
+      auto& tmp = deltas[j];
       if (tmp.ve == G.get_version()) {
         revert(G, tmp);
       } else if (tmp.vs == G.get_version()) {
@@ -699,23 +713,26 @@ int parallel_main(int argc, char* argv[]) {
       }
     }
     cout << "finish get path" << endl;
-    delta_log<symmetricVertex> dlg = delta_log<symmetricVertex>(G, 0.9, 0.001, true);
+    delta_log<symmetricVertex> dlg = delta_log<symmetricVertex>(G, 0.9, 0.01, true);
     cout << "finish get dlg" << endl;
     cout << dlg.delta_rate << endl;
     cout << dlg.deltaLog.size() << endl;
     dlg.ver_end = i;
     delta<symmetricVertex> dlt = delta<symmetricVertex>(dlg, G);
     cout << "finish get dlt" << endl;
-    deltalogs.push_back(dlg);
-    deltas.push_back(dlt);
+    
     // apply(G, dlt);
-    cout << "dirty after roll " << G.accessAllEdges() << endl;
+    // cout << "dirty after roll " << G.accessAllEdges() << endl;
 
     string savefile = savedir + to_string(i-1) + '-' + to_string(i);
     if (delta_step == 0) {
       dlt.write_edge_entry(savefile.c_str());
       cout << "finish write" << endl;
+      apply(G, dlt);
+      continue;
     }
+    deltalogs.push_back(dlg);
+    deltas.push_back(dlt);
     uintT s = i-1;
     uintT e = i;
     path = get_revert_path(deltas, s, e);
@@ -739,6 +756,154 @@ int parallel_main(int argc, char* argv[]) {
 }
   /////  end of code for generate tree delta
   ChronoTimer cter;
+
+  if (test_disk) {
+    cout << "begin read graph" << endl;
+    startTime();
+    graph<HVertex> G = readHGraphFromFile(iFile, false);
+    nextTime("load graph ");
+    deltavector<HVertex> dv;
+    for (uintT i=0; i<delta_num; i++) {
+      string filename = basedir+to_string(i) + '-' + to_string(i+1);
+      cout << "loading delta file " << filename << endl;
+      delta_log<HVertex> dlg = load_deltalog_from_file<HVertex>(G, filename.c_str());
+      delta<HVertex> dlt = delta<HVertex>(dlg, G);
+      apply(G, dlt);
+      dv.append(dlt);
+    }
+    
+    // cout << "begin save disk" << endl;
+    if (delta_num>64)
+      dv.trick_save_disk();
+    for (auto j=0; j<10; j++) {
+      auto randi = distOrder::get(j, delta_num);
+      string print_time = "jump to version " + to_string(randi);
+      startTime();
+      jump_with_disk_check(dv, G, randi);
+      nextTime(print_time);
+      jump_with_disk_check(dv, G, delta_num);
+    }
+    // dv.trick_save_disk();
+    
+    G.del();
+    return 0;
+  }
+
+  if (test_memory) {
+    cout << "task: test memory of twitter graph" << endl;
+    startTime();
+    graph<HVertex> G = readHGraphFromFile(iFile, false);
+    nextTime("load graph");
+    deltavector<HVertex> dv;
+    for (uintT i=0; i<delta_num; i++) {
+      string filename = basedir+to_string(i) + '-' + to_string(i+1);
+      cout << "loading delta file " << filename << endl;
+      delta_log<HVertex> dlg = load_deltalog_from_file<HVertex>(G, filename.c_str());
+      delta<HVertex> dlt = delta<HVertex>(dlg, G);
+      apply(G, dlt);
+      dv.append(dlt);
+      print_mem(pid);
+    }
+    G.del();
+    return 0;
+  }
+
+  if (test_sort) {
+    cout << "task : determine time difference of sorted data and unsorted data" << endl;
+    graph<HVertex> G = readHGraphFromFile(iFile, false);
+    for (auto i=0; i<delta_num; i++) {
+      string filename = basedir + to_string(i) + '-' + to_string(i+1);
+      delta_log<HVertex> dlg = load_deltalog_from_file<HVertex>(G, filename.c_str());
+      delta<HVertex> dlt = delta<HVertex>(dlg, G);
+      apply(G, dlt);
+    }
+    print_mem(pid);
+    cout << "finish apply delta" << endl;
+    Compute(G, P);
+    startTime();
+    Compute(G, P);
+    nextTime("compute on natual ");
+    G.sort();
+    nextTime("sort time");
+    Compute(G, P);
+    nextTime("warm up ");
+    Compute(G, P);
+    nextTime("compute on sorted ");
+    G.del();
+    return 0;
+  }
+
+  if (test_copy) {
+    vector<graph<HVertex>> graphs;
+    cout << "task: test performance of copy+delta baseline" << endl;
+    bigDelta<HVertex> bda;
+    graph<HVertex> G = readHGraphFromFile(iFile, false);
+    for (uintT i=0; i<delta_num; i++) {
+      if (i>0 && i%10 == 0) {
+        graphs.push_back(G);
+      }
+      print_mem(pid);
+      string filename = basedir+to_string(i) + '-' + to_string(i+1);
+      cout << "loading delta file " << filename << endl;
+      delta_log<HVertex> dlg = load_deltalog_from_file<HVertex>(G, filename.c_str());
+      delta<HVertex> dlt = delta<HVertex>(dlg, G);
+      apply(G, dlt);
+      bda.append(dlt);
+    }
+    for (int i=0; i<61; i++) {
+      // auto randi = distOrder::get(i, delta_num);
+      auto randi = i;
+      uintT graph_index = (randi-5)/10;
+      if (graph_index > delta_num/10) {
+        graph_index -= 1;
+      }
+
+      auto origin_version = graphs[graph_index].get_version();
+
+      string print_time = "jump from " + to_string(origin_version) + " to version " + to_string(randi);
+      string print_compute = "compute on version " + to_string(randi);
+      
+      
+      // cout << graph_index << " " << origin_version << endl;
+      jump(graphs[graph_index], bda, randi);
+      jump(graphs[graph_index], bda, origin_version);
+      startTime();
+      jump(graphs[graph_index], bda, randi);
+      nextTime(print_time);
+      // Compute(graphs[graph_index], P);
+      // startTime();
+      // Compute(graphs[graph_index], P);
+      // nextTime(print_compute);
+      // cout << graph_index << " " << origin_version << " " << graphs[graph_index].get_version() << endl;
+      // cter.start();
+      // cout << "dirty data " << G.accessAllEdges() << endl;
+      // nextTime("access all edge");
+      // cout << "access all edge : " << cter.elapsed() << endl;
+      jump(graphs[graph_index], bda, origin_version);
+    }
+    // for (auto & g: graphs) {
+    //   g.del();
+    // }
+    return 0;
+  }
+
+  if (test_minitime) {
+    graph<HVertex> G = readHGraphFromFile(iFile, true, offset_wall);
+    deltavector<HVertex> dv;
+    for (auto i=0; i<delta_num; i++) {
+      string filename = basedir + to_string(i) + '-' + to_string(i+1);
+      delta_log<HVertex> dlg = load_deltalog_from_file<HVertex>(G, filename.c_str());
+      delta<HVertex> dlt = delta<HVertex>(dlg, G);
+      dv.append(dlt);
+      apply(G, dlt);
+    }
+    cout << endl;
+    jump_with_disk_check(dv, G, 10);
+    cout << endl;
+    jump_with_disk_check(dv, G, 20);
+    return 0;
+  }
+
   if (!hybrid_vertex) {
     startTime();
     graph<HVertex> G = readHGraphFromFile(iFile, false);
@@ -753,7 +918,7 @@ int parallel_main(int argc, char* argv[]) {
 
       // get delta and merge into a bigDelta
       for (auto i = 0; i < delta_num; i++) {
-        cout << "delta : " << i << "-" << i+1 << endl;
+        // cout << "delta : " << i << "-" << i+1 << endl;
         string filename = basedir + to_string(i) + '-' + to_string(i+1);
         // delta_log<symmetricVertex> dlg = load_deltalog_from_file<symmetricVertex>(G, filename.c_str());
         // delta<symmetricVertex> dlt = delta<symmetricVertex>(dlg, G);
@@ -761,41 +926,71 @@ int parallel_main(int argc, char* argv[]) {
         delta<HVertex> dlt = delta<HVertex>(dlg, G);
         bdelta.append(dlt);
         forward(G, bdelta);
-        if (!(i%5)) {
-          print_mem(pid);
-          // startTime();
-          cter.start();
-          cout << "dirty data " << G.accessAllEdges() << endl;
-          // nextTime("access all edge");
-          cout << "access all edge : " << cter.elapsed() << endl;
-        }
+        // if (!(i%5)) {
+        //   // print_mem(pid);
+        // //   // startTime();
+        //   cter.start();
+        //   cout << "dirty data " << G.accessAllEdges() << endl;
+        // //   // nextTime("access all edge");
+        //   cout << "access all edge : " << cter.elapsed() << endl;
+        // }
       }
+      cout << "finish load " << delta_num << " deltas." << endl; 
+      if (need_replica) {
+        graph<HVertex> GA = G;
+        print_mem(pid);
+        startTime();
+        // G.sort();
+        Compute(G, P);
+        nextTime("compute time ");
+        return 0;
+      }
+      
 
       // switch and compute every 5 version
-      for(int r = 0; r < delta_num; r++) {
-        if (r%5) { continue; }
-        jump(G, bdelta, delta_num);
-        string print_data = "switch time to " + to_string(r) + " : ";
-        // startTime();
-        cter.start();
-        jump(G, bdelta, r);
-        // nextTime("access all edge");
-        cout << "switch time to " + to_string(r) + " " << cter.elapsed() << endl;
-      }
-      return 0;
-      
+      // for(int r = 0; r < delta_num; r++) {
+      //   if (r%5) { continue; }
+      //   jump(G, bdelta, r);
+      //   jump(G, bdelta, delta_num);
+      //   cter.start();
+      //   jump(G, bdelta, r);
+      //   cout << "switch time to " + to_string(r) + " " << cter.elapsed() << endl;
+        // Compute(G, P);
+        // cter.start();
+        // Compute(G, P);
+        // Compute(G, P);
+        // Compute(G, P);
+        // cout << "compute time @ " + to_string(r) + " " << cter.elapsed() << endl;
+      //   jump(G, bdelta, delta_num);
+      // }
+      // return 0;
+
+      // cter.start();
+      // Compute(G, P);
+      // cout << "run time " << cter.elapsed() << endl;
+      // G.sort();
+      // cout << "sort time " << cter.elapsed() << endl;
+      // Compute(G, P);
+      // cout << "run time 2 " << cter.elapsed() << endl;
+      // return 0;
+
       // random switch with skew in version
-      for(int r=0; r<distOrder::get_size(); r++) {
-        int randi = distOrder::get(r, delta_num);
-        string print_data1 = "addtime1 to version " + to_string(r) + " : ";
-        string print_data2 = "addtime2 to version " + to_string(r) + " : ";
-        jump(G, bdelta, delta_num);
-        startTime();
-        jump(G, bdelta, randi);
-        nextTime(print_data1)
-        Compute(G,P);
-        nextTime(print_data2);
-      }
+       for(int r=0; r<12; r++) {
+         int randi = distOrder::get(r, delta_num);
+         string print_data1 = "switch time  to version " + to_string(randi) + " : ";
+         string print_data2 = "compute time at version " + to_string(randi) + " : ";
+         jump(G, bdelta, delta_num);
+         // startTime();
+         cter.start();
+         jump(G, bdelta, randi);
+         cout << print_data1 << cter.elapsed()/1000000 << "ms" << endl;
+         // nextTime(print_data1)
+         // Compute(G,P);
+         cter.start();
+         Compute(G,P);
+         // nextTime(print_data2);
+         cout << print_data2 << cter.elapsed() / 1000000000 << "s" << endl;
+       }
     } else {
       // versionGraph<symmetricVertex> vg;
       versionGraph<HVertex> vg;
@@ -815,19 +1010,20 @@ int parallel_main(int argc, char* argv[]) {
         jump(G, vg, tmp);
         vg.shrink();
         G.shrink();
-        if (!(i%5)) {
-          print_mem(pid);
-          // startTime();
-          cter.start();
-          cout << "dirty data " << G.accessAllEdges() << endl;
-          // nextTime("access all edge");
-          cout << "access all edge : " << cter.elapsed() << endl;
-        }
+        // if (!(i%5)) {
+        //   print_mem(pid);
+        //   // startTime();
+        //   cter.start();
+        //   cout << "dirty data " << G.accessAllEdges() << endl;
+        //   // nextTime("access all edge");
+        //   cout << "access all edge : " << cter.elapsed() << endl;
+        // }
       }
 
       // switch and compute every 5 version
       for(int r = 0; r < delta_num; r++) {
         if (r%5) { continue; }
+        jump(G, vg, r);
         jump(G, vg, delta_num);
         string print_data = "switch time to " + to_string(r) + " : ";
         // startTime();
@@ -835,21 +1031,26 @@ int parallel_main(int argc, char* argv[]) {
         jump(G, vg, r);
         // nextTime("access all edge");
         cout << "switch time to " + to_string(r) + " " << cter.elapsed() << endl;
+        // Compute(G, P);
+        cter.start();
+        // Compute(G, P);
+        // cout << "compute time @ " + to_string(r) + " " << cter.elapsed() << endl;
+        jump(G, vg, delta_num);
       }
       return 0;
 
       // random switch with skew in version
-      for(int r=0; r<distOrder::get_size(); r++) {
-        int randi = distOrder::get(r, delta_num);
-        string print_data1 = "addtime1 to version " + to_string(r) + " : ";
-        string print_data2 = "addtime2 to version " + to_string(r) + " : ";
-        jump(G, vg, delta_num);
-        startTime();
-        jump(G, vg, randi);
-        nextTime(print_data1);
-        Compute(G,P);
-        nextTime(print_data2);
-      }
+      // for(int r=0; r<10; r++) {
+      //   int randi = distOrder::get(r, delta_num);
+      //   string print_data1 = "addtime1 to version " + to_string(r) + " : ";
+      //   string print_data2 = "addtime2 to version " + to_string(r) + " : ";
+      //   jump(G, vg, delta_num);
+      //   startTime();
+      //   jump(G, vg, randi);
+      //   // nextTime(print_data1);
+      //   Compute(G,P);
+      //   nextTime(print_data2);
+      // }
     }
     G.del();
   } else { // code for hybrid vertex
@@ -873,38 +1074,45 @@ int parallel_main(int argc, char* argv[]) {
         if (!(i%5)) {
           print_mem(pid);
           // startTime();
-          cter.start();
-          cout << "dirty data " << G.accessAllEdges() << endl;
+          // cter.start();
+          // cout << "dirty data " << G.accessAllEdges() << endl;
           // nextTime("access all edge");
-          cout << "access all edge : " << cter.elapsed() << endl;
+          // cout << "access all edge : " << cter.elapsed() << endl;
         }
       }
 
-      // switch and compute every 5 version
-      for(int r = 0; r < delta_num; r++) {
-        if (r%5) { continue; }
-        jump(G, bdelta, delta_num);
-        string print_data = "switch time to " + to_string(r) + " : ";
-        // startTime();
-        cter.start();
-        jump(G, bdelta, r);
-        // nextTime("access all edge");
-        cout << "switch time to " + to_string(r) + " " << cter.elapsed() << endl;
-      }
+      // // switch and compute every 5 version
+      // for(int r = 0; r < delta_num; r++) {
+      //   // if (r%5) { continue; }
+      //   jump(G, bdelta, r);
+      //   jump(G, bdelta, delta_num);
+      //   string print_data = "switch time to " + to_string(r) + " : ";
+      //   // startTime();
+      //   cter.start();
+      //   jump(G, bdelta, r);
+      //   cout << "switch time to " + to_string(r) + " " << cter.elapsed() << endl;
+      //   Compute(G, P);
+      //   cter.start();
+      //   Compute(G, P);
+      //   cout << "compute time @ " + to_string(r) + " " << cter.elapsed() << endl;
+      //   jump(G, bdelta, delta_num);
+      // }
 
-      return 0;
+      // return 0;
 
       // random switch with skew in version
-      for(int r=0; r<distOrder::get_size(); r++) {
+      for(int r=0; r<10; r++) {
         int randi = distOrder::get(r, delta_num);
-        string print_data1 = "addtime1 to version " + to_string(r) + " : ";
-        string print_data2 = "addtime2 to version " + to_string(r) + " : ";
+        string print_data1 = "addtime1 to version " + to_string(randi) + " : ";
+        string print_data2 = "addtime2 to version " + to_string(randi) + " : ";
         jump(G, bdelta, delta_num);
-        startTime();
+        // Compute(G,P);
+        cter.start();
         jump(G, bdelta, randi);
-        nextTime(print_data1);
+        // nextTime(print_data1);
         Compute(G,P);
-        nextTime(print_data2);
+        cout << print_data2 << cter.elapsed() << endl;
+        // nextTime(print_data2);
       }
     } else {
       versionGraph<HVertex> vg;
@@ -920,43 +1128,52 @@ int parallel_main(int argc, char* argv[]) {
         uintT tmp = dlt->ve;
         vg.append(G, dlt);
         // print_mem(pid);
-        vg.shrink();
-        G.shrink();
+        // vg.shrink();
+        // G.shrink();
         jump(G, vg, tmp);
         if (!(i%5)) {
           print_mem(pid);
           // startTime();
-          cter.start();
-          cout << "dirty data " << G.accessAllEdges() << endl;
+          // cter.start();
+          // cout << "dirty data " << G.accessAllEdges() << endl;
           // nextTime("access all edge");
-          cout << "access all edge : " << cter.elapsed() << endl;
+          // cout << "access all edge : " << cter.elapsed() << endl;
         }
       }
 
-      // switch and compute every 5 version
-      for(int r = 0; r < delta_num; r++) {
-        if (r%5) { continue; }
-        jump(G, vg, delta_num);
-        string print_data = "switch time to " + to_string(r) + " : ";
-        // startTime();
-        cter.start();
-        jump(G, vg, r);
-        // nextTime("access all edge");
-        cout << "switch time to " + to_string(r) + " " << cter.elapsed() << endl;
-      }
-      return 0;
+      // // switch and compute every 5 version
+      // for(int r = 0; r < delta_num; r++) {
+      //   // if (r%5) { continue; }
+      //   jump(G, vg, r);
+      //   jump(G, vg, delta_num);
+      //   string print_data = "switch time to " + to_string(r) + " : ";
+      //   // startTime();
+      //   cter.start();
+      //   jump(G, vg, r);
+      //   // nextTime("access all edge");
+      //   cout << "switch time to " + to_string(r) + " " << cter.elapsed() << endl;
+      //   Compute(G, P);
+      //   cter.start();
+      //   Compute(G, P);
+      //   cout << "compute time @ " + to_string(r) + " " << cter.elapsed() << endl;
+      //   jump(G, vg, delta_num);
+      // }
+      // return 0;
 
       // random switch with skew in version
-      for(int r=0; r<distOrder::get_size(); r++) {
+      for(int r=0; r<10; r++) {
         int randi = distOrder::get(r, delta_num);
-        string print_data1 = "addtime1 to version " + to_string(r) + " : ";
-        string print_data2 = "addtime2 to version " + to_string(r) + " : ";
+        string print_data1 = "addtime1 to version " + to_string(randi) + " : ";
+        string print_data2 = "addtime2 to version " + to_string(randi) + " : ";
         jump(G, vg, delta_num);
-        startTime();
+        // startTime();
+        // Compute(G,P);
+        cter.start();
         jump(G, vg, randi);
-        nextTime(print_data1);
+        // nextTime(print_data1);
         Compute(G,P);
-        nextTime(print_data2);
+        cout << print_data2 << cter.elapsed() << endl;
+        // nextTime(print_data2);
       }
     }
     G.del();

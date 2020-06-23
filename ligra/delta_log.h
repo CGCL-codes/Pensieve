@@ -2,8 +2,10 @@
 #define _DELTA_LOG_H
 
 #include <vector>
+#include <unordered_set>
 #include "vertex.h"
 #include "myutil.h"
+#include "threadpool.h"
 
 using namespace std;
 
@@ -41,6 +43,8 @@ uintT bin_search(vector<uintT> &arr, uintT target) {
   return start;
 }
 
+mutex mtx;
+
 template <class vertex>
 struct delta_log{
   vector<intTriple> deltaLog;
@@ -48,6 +52,7 @@ struct delta_log{
   uintT ver_end;
   double add_rate = 0.1;
   double delta_rate = 0.001;
+  
 
   delta_log(vector<intTriple> _deltalog):deltaLog(_deltalog){}
 
@@ -60,13 +65,13 @@ struct delta_log{
   }
 
   delta_log(graph<vertex> &graph) {
-    do_gen_deltalog();
+    do_gen_deltalog(graph);
   }
 
   delta_log(graph<vertex> &graph, double _add_rate, double _delta_rate) {
     add_rate = _add_rate;
     delta_rate = _delta_rate;
-    do_gen_deltalog();
+    do_gen_deltalog(graph);
   }
 
   void do_gen_deltalog(graph<vertex> &graph) {
@@ -79,7 +84,7 @@ struct delta_log{
       // }
       auto vtmp = graph.getvertex(i);
       auto vsize = vtmp->getInDegree();
-      auto add_and_del = get_delta(vtmp, graph.n);
+      auto add_and_del = get_delta_easy(vtmp, graph.n);
 
       for (auto deledge : add_and_del) {
         deltaLog.push_back(make_pair(i, make_pair(deledge.first, deledge.second)));
@@ -92,6 +97,31 @@ struct delta_log{
     }
     sort(deltaLog.begin(), deltaLog.end(), logLT());
     // cout << "when do gen deltalog : add " << a << " and del " << d << endl;
+  }
+
+  vector<pair<uintE, intE>> get_delta_easy(vertex* v, uintE max_id) {
+    vector<pair<uintE, intE>> ret;
+    uintT s = v->getInDegree();
+    if (s == 0) {
+      return ret;
+    }
+    int remain = s*delta_rate + 0.5;
+    int del_number = remain*(1-add_rate)+0.5;
+    int add_number = remain - del_number;
+    unordered_set<int> nghs;
+    for (auto i=0; i<s; i++) {
+      nghs.insert(v->getInNeighbor(i));
+    }
+    for (auto i=rand()%(max_id/2); add_number > 0&&i<max_id; i++) {
+      if (nghs.find(i) == nghs.end()) {
+        add_number -= 1;
+        ret.push_back({i, -1});
+      }
+    }
+    for (auto i=0; i<del_number; i++) {
+      ret.push_back({v->getInNeighbor(i), i});
+    }
+    return ret;
   }
 
   vector<pair<uintE, intE>> get_delta(vertex * v, uintE max) {
@@ -108,6 +138,12 @@ struct delta_log{
     // delta entry remained.
     double remain = s * delta_rate;
     vector<uintT> add_new, del_new;
+    unordered_set<int> nghs;
+    if (s>100) {
+      for (auto i=0; i<s; i++) {
+        nghs.insert(v->getInNeighbor(i));
+      }
+    }
 
     while (remain > 0) {
       // if remain less than 1, there is a possibility to get a new delta.
@@ -115,11 +151,14 @@ struct delta_log{
       // if try to get a delta entry 
       if (randomFloatBiggerThan(1-add_rate)) {
         uintT tmp = rand() % max;
-        // if selected end vertex is already in the vertex, continue to find another one.
-        if (v->find_val(tmp) == -1) {
-          add_new.push_back(tmp);
-        } else {
+        if (s>100 && nghs.find(tmp) != nghs.end()){
           continue;
+        }
+        // if selected end vertex is already in the vertex, continue to find another one.
+        else if (s < 100 && v->find_val(tmp) != -1) {
+          continue;
+        } else {
+          add_new.push_back(tmp);
         }
       } else {
         // del_new gathers pos of edges try to delete.

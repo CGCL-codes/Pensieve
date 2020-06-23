@@ -94,7 +94,7 @@ void Compute(graph<vertex>& GA, commandLine P) {
   while(!Frontier.isEmpty()){
     round++;
     vertexMap(Frontier, Radii_Vertex_F(Visited,NextVisited));
-    vertexSubset output = edgeMap(GA,Frontier,Radii_F(Visited,NextVisited,radii,round));
+    vertexSubset output = edgeMap(&GA,Frontier,Radii_F(Visited,NextVisited,radii,round));
     Frontier.del();
     Frontier = output;
   }

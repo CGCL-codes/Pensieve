@@ -1,7 +1,7 @@
 Pensieve: Skewness-Aware Version Switching for Efficient Graph Processing
 ======================
 
-We propose Pensieve, a skewness-aware multi-version graph processing system. Two factors contribute to the efficiency of Pensieve. First, Pensieve leverages a differentiated graph storage strategy that stores low degree vertices using copy-based scheme while stores high degree ones using delta-based scheme. Such a design achieves a good trade-off between storage cost and version switching time for multi-version graph processing. Second, the Pensieve graph storage exploits the time locality of graph version access and designs a novel last-root version switching scheme, which significantly improves the access efficiency for recent versions. We implement Pensieve on top of Ligra, and conduct comprehensive experiments to evaluate the performance of this design using large-scale datasets collected from real world systems. The results show that Pensieve substantially outperforms state-of-the-art designs in terms of memory consumption and version switching time.
+Pensieve is a skewness-aware multi-version graph processing system. Two factors contribute to the efficiency of Pensieve. First, Pensieve leverages a differentiated graph storage strategy that stores low degree vertices using copy-based scheme while stores high degree ones using delta-based scheme. Such a design achieves a good trade-off between storage cost and version switching time for multi-version graph processing. Second, the Pensieve graph storage exploits the time locality of graph version access and designs a novel last-root version switching scheme, which significantly improves the access efficiency for recent versions. We implement Pensieve on top of Ligra, and conduct comprehensive experiments to evaluate the performance of this design using large-scale datasets collected from real world systems. The results show that Pensieve substantially outperforms state-of-the-art designs in terms of memory consumption and version switching time.
 
 Introduction
 --------
@@ -26,27 +26,27 @@ we present Pensieve, a novel skewness-aware multi-version graph processing syste
 
 Structure of Pensieve
 --------
-![Pensieve Architecture](https://github.com/Pensieve-code/Pensieve/raw/master/tutorial/Pensieve_arch.png)
+![Pensieve Architecture](https://github.com/CGCL-codes/Pensieve/raw/master/image/Pensieve_arch.png)
 
 Pensieve provides multi-version graph storage for a multi-version graph processing system. 
 Pensieve stores graph data and delta separately. Both graph storage and delta storage are divided into two part: high degree vertices in graph storage correspond to delta-based delta format and low degree vertices to copy-based delta. 
 Pensieve has two control components, including vertex splitter and version controller. The vertex splitter processes new deltas and stores them in different delta storage, while the version controller captures the relationship among versions. When the graph processing system needs a specific version, the version controller responds to the request and dispatches the task to delta storage and graph storage to perform version switching.
 
 
-Compilation
+Compilation and Run
 --------
 
 Compilation is done from within the apps/ directory. 
 
 Compilers
 
-* g++ &gt;= 5.3.0 
+* g++ \<= 5.3.0 
 
 After the appropriate environment variables are set, to compile,
 simply run
 
 ```
-$ make -j  #compiles with all threads
+$ make 
 ```
 
 The following commands cleans the directory:
@@ -54,6 +54,15 @@ The following commands cleans the directory:
 $ make clean #removes all executables
 $ make cleansrc #removes all executables and linked files from the ligra/ directory
 ```
+
+To run a simple tast (like BFS):
+```
+./BFS -n 100 -s /path/to/graph/file
+```
+
+Before you run the code, please make sure you have the necessary delta files. Path of these files should be configured in main function of ligra/ligra.h
+
+There are plenty of optional in the main function in ligra/ligra.h. Please activate them as needed.
 
 
 Input Format for Pensieve
@@ -73,26 +82,37 @@ edges. The block continues until the offset of the next vertex, or
 the end if i is the last vertex. All vertices and offsets are 0 based
 and represented in decimal. The specific format is as follows:
 
+### Graph
+
 AdjacencyGraph  
-&lt;n>  
-&lt;m>  
-&lt;o0>  
-&lt;o1>  
+\<n\>  
+\<m\>  
+\<o0\>  
+\<o1\>  
 ...  
-&lt;o(n-1)>  
+<o(n-1)\>  
 &lt;e0>  
 &lt;e1>  
 ...  
 &lt;e(m-1)>  
 
-This file is represented as plain text.
+### Delta
 
+DELTA_FILE  
+<version_start> <version_end>  
+\<add_number\>  
+\<del_number\>  
+<add_src0> <add_dst0>    
+<add_src1> <add_dst1>  
+...  
+<add_srcx> <add_dstx>  
+<del_src0> <del_dst0>      
+<del_src1> <del_dst1>  
+...  
+<del_srcy> <del_dsty>
 
-Ligra Data Structure and Functions
----------
-### Data Structure
+All file are represented as plain text.
 
-Pensieve data structure is clearly described in the paper. One can refer to the paper for data structure detail.
 
 Graph Applications
 ---------
@@ -109,11 +129,14 @@ independent set), **KCore.C** (K-core decomposition), **Triangle.C**
 
 Publications  
 -------- 
-Tangwei Ying, Hanhua Chen and Hai Jin. *Pensieve: Skewness-Aware Version Switching for Efficient Graph Processing*. Accepted by SIGMOD 2020.
+If you want to know more detailed information, please refer to this paper:  
+Tangwei Ying, Hanhua Chen, Hai Jin. [Pensieve: Skewness-Aware Version Switching for Efficient Graph Processing](https://dl.acm.org/doi/10.1145/3318464.3380590) in Proceedings of the 2020 International Conference on Management of Data (SIGMOD 2020), online conference [Portland, OR, USA], June 14-19, 2020.  
+([bibtex](https://github.com/CGCL-codes/Pensieve/blob/master/Pensieve.bib))
+
 
 Authors and Copyright
 --------
 
 Pensieve is developed in National Engineering Research Center for Big Data Technology and System, Cluster and Grid Computing Lab, Services Computing Technology and System Lab, School of Computer Science and Technology, Huazhong University of Science and Technology, Wuhan, China by Tangwei Ying(ytw@hust.edu.cn), Hanhua Chen (chen@hust.edu.cn) and Hai Jin (hjin@hust.edu.cn).
 
-Copyright (C) 2019, STCS & CGCL and Huazhong University of Science and Technology.
+Copyright (C) 2019, [STCS & CGCL](grid.hust.edu.cn) and [Huazhong University of Science and Technology](www.hust.edu.cn).

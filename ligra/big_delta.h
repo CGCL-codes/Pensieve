@@ -14,7 +14,7 @@ struct bigDelta {
 
   vector<int> add_number;
 
-  int append(delta<vertex> da) {
+  int append(delta<vertex> &da) {
     versions.push_back(vertexs.size());
     vertexs.reserve(vertexs.size()+da.vertexs.size());
     
@@ -87,7 +87,7 @@ struct bigDelta {
 template <class vertex> 
 int forward(graph<vertex> &ga, bigDelta<vertex> &bda, int step = 1) {
   if (step == 0) {
-    cout << "forward 0 step, that's to say, nothing happened" << endl;
+    // cout << "forward 0 step, that's to say, nothing happened" << endl;
     return 0;
   }else if (step < 0) {
     return backward(ga, bda, -1 * step);
@@ -205,6 +205,7 @@ int backward(graph<vertex> &ga, bigDelta<vertex> &bda, int step) {
       }
     }}
   }
+  
   // cout << "after add and delete" << cter.elapsed() << endl;
   ga.set_version(version_end);
 
@@ -223,8 +224,130 @@ int jump(graph<vertex>& ga, bigDelta<vertex>& bda, int target) {
     cout << target << "   " << bda.get_max_version() << endl;
     return -1;
   }
-  cout << "jump " << target << " " << ga.get_version() << endl;
+  // cout << "jump " << target << " " << ga.get_version() << endl;
   return forward(ga, bda, target - (int) ga.get_version());
+}
+
+template <class vertex>
+class deltavector{
+  vector<int> in_memory;
+  vector<delta<vertex>> deltas;
+  string savedir;
+
+public:
+
+  deltavector(string save = "/public/home/tangwei/graphdata/twitter/disktmp") {
+    savedir = save;
+  }
+  void append(delta<vertex>& d) {
+    deltas.push_back(d);
+    // cout << "copy construction" << endl;
+    in_memory.push_back(1);
+  }
+
+  void append(delta<vertex>&& d) {
+    deltas.push_back(d);
+    cout << "move construction" << endl;
+    in_memory.push_back(1);
+  }
+
+  void save_disk(int count = 0) {
+    if (deltas.size() < 10) {
+      return;
+    }
+    if (count == 0) {
+      count = deltas.size() * 0.8;
+    }
+    cout << "save from 0 to " << count << endl;;
+    for (auto i=0; i<count; i++) {
+      if (!in_memory[i]) {
+        continue;
+      }
+      string save_file = get_disk_filename(i);
+      deltas[i].write_pensieve_delta(save_file.c_str());
+      deltas[i].clear();
+      in_memory[i] = 0;
+      cout << "saved " << save_file << endl;
+    }
+  }
+
+  int save_one(bool trick = false) {
+    auto remain = count_if(in_memory.begin(), in_memory.end(), [](int i){return i==1;});
+    if (remain < 10 || remain <= in_memory.size() * 0.8) {
+      return -1;
+    }
+    auto tmp = find(in_memory.begin(), in_memory.end(), 1);
+    if (tmp == in_memory.end()) {
+      return -1;
+    }
+    auto index = *tmp;
+    if (!trick) {
+      string save_file = get_disk_filename(index);
+      deltas[index].write_pensieve_delta(save_file.c_str());
+    }
+    deltas[index].clear();
+    in_memory[index] = 1;
+    return 0;
+  }
+
+  void trick_save_disk(int count = 0) {
+    if (deltas.size() < 10) {
+      return;
+    }
+    if (count == 0) {
+      count = deltas.size() * 0.8;
+    }
+    cout << "fake save from 0 to " << count << endl;
+    for (auto i=0; i<count; i++) {
+      if (!in_memory[i]) {
+        continue;
+      }
+      deltas[i].clear();
+      in_memory[i] = 0;
+    }
+  }
+
+  bool delta_in_memory(uintT index) {
+    return index < in_memory.size() && in_memory[index] == 1;
+  }
+
+  delta<vertex> & get_delta(uintT index) {
+    return deltas[index];
+  }
+
+  string get_disk_filename(uintT index) {
+    return savedir + "/" + to_string(index) + "-" + to_string(index+1);
+  }
+};
+
+template <class vertex>
+void jump_with_disk_check(deltavector<vertex> & dv, graph<vertex> & g, int target) {
+  auto curr_ver = g.get_version();
+  cout << "jump from " << curr_ver << " to " << target << endl;
+  if (target == curr_ver) return;
+  if (target>curr_ver) {
+    for (auto i=curr_ver; i<target; i++) {
+      if (dv.delta_in_memory(i)) {
+        cout << "apply in memory " << i << endl;
+        apply(g, dv.get_delta(i));
+      } else {
+        cout << "apply disk " << i << endl;
+        delta<vertex> tmpd(dv.get_disk_filename(i).c_str());
+        apply(g, tmpd);
+      }
+    }
+  } else {
+    for (int i=curr_ver-1; i>=target; i--) {
+      if (dv.delta_in_memory(i)) {
+        cout << "revert in memory " << i << endl;
+        revert(g, dv.get_delta(i));
+      } else {
+        cout << "revert disk " << i << endl;
+        delta<vertex> tmpd(dv.get_disk_filename(i).c_str());
+        revert(g, tmpd);
+      }
+    }
+  }
 }
 
 #endif
