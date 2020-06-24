@@ -34,7 +34,7 @@ Pensieve has two control components, including vertex splitter and version contr
 
 Index deletion
 ---------
-![Index deletion](https://github.com/Pensieve-code/Pensieve/raw/master/image/index_deletion.gif)
+![Index deletion](https://github.com/CGCL-codes/Pensieve/raw/master/image/index_deletion.gif)
 
 This figure shows an example that the graph deletes an edge a->d and then adds a new edge a->c. 
 
@@ -141,7 +141,7 @@ independent set), **KCore.C** (K-core decomposition), **Triangle.C**
 
 Evaluation Result 
 ----------
-![Pensieve result](https://github.com/Pensieve-code/Pensieve/raw/master/image/Pnesieve_result.jpg)
+![Pensieve result](https://github.com/CGCL-codes/Pensieve/raw/master/image/Pensieve_result.jpg)
 
 Memory cost is an important aspect which we target in Pensieve design. The result shows that the previous Version Traveler system needs a prohibitively high memory cost due to its copy-based scheme. We can see that Pensieve significantly reduces the memory cost of the GraphPool system by 40%.
 
