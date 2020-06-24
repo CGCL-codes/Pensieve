@@ -32,6 +32,18 @@ Pensieve provides multi-version graph storage for a multi-version graph processi
 Pensieve stores graph data and delta separately. Both graph storage and delta storage are divided into two part: high degree vertices in graph storage correspond to delta-based delta format and low degree vertices to copy-based delta. 
 Pensieve has two control components, including vertex splitter and version controller. The vertex splitter processes new deltas and stores them in different delta storage, while the version controller captures the relationship among versions. When the graph processing system needs a specific version, the version controller responds to the request and dispatches the task to delta storage and graph storage to perform version switching.
 
+Index deletion
+---------
+![Index deletion](https://github.com/Pensieve-code/Pensieve/raw/master/image/index_deletion.gif)
+
+This figure shows an example that the graph deletes an edge a->d and then adds a new edge a->c. 
+
+In our design, when a->d is deleted, we record the deletion index, that is the position of the deleted edge in the vector of vertex a, in our delta structure. Then, we move the last item in the vector of a to the position where d is deleted. Next, we append the added item c directly to the tail of the vector. 
+
+We can see, such an index deletion structure is quite friendly to version backtracking. In this example, with the structure of the current graph version, if we need to switch to the previous graph version. We just need to remove the last item c, move the item a in the recoded deletion position back to the tail of the vector, and recover deleted item d at the position. 
+
+It is clear that index deletion greatly reduces the computation and memory consumption during edge deletion.
+
 
 Compilation and Run
 --------
@@ -125,6 +137,17 @@ centrality), **Radii.C** (graph eccentricity estimation),
 **BFSCC.C** (connected components based on BFS), **MIS.C** (maximal
 independent set), **KCore.C** (K-core decomposition), **Triangle.C**
 (triangle counting), and **CF.C** (collaborative filtering).
+
+
+Evaluation Result 
+----------
+![Pensieve result](https://github.com/Pensieve-code/Pensieve/raw/master/image/Pnesieve_result.jpg)
+
+Memory cost is an important aspect which we target in Pensieve design. The result shows that the previous Version Traveler system needs a prohibitively high memory cost due to its copy-based scheme. We can see that Pensieve significantly reduces the memory cost of the GraphPool system by 40%.
+
+The graph accessing time reflects the efficiency of obtaining the graph data. The result shows that Pensieve outperforms GraphPool and Version Traveler in most datasets. 
+
+The average processing time is average time of many switching and processing. It shows the overall performance of the graph processing system. The experiment results show that it is too hard for Ligra to finish one task. The huge switching time makes Ligra slow in graph processing. Pensieve outperform Version Traveler and GraphPool in various datasets and algorithms. Specially, Twitter graph is too large for all the three existing systems to finish even a BFS, they either fail to store all the version, or get too slow to switch to target version. In contrast, it can be processed in our Pensieve system in only a few second.
 
 
 Publications  
