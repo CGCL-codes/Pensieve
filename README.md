@@ -153,7 +153,7 @@ The average processing time is average time of many switching and processing. It
 Publications  
 -------- 
 If you want to know more detailed information, please refer to this paper:  
-Tangwei Ying, Hanhua Chen, Hai Jin. [Pensieve: Skewness-Aware Version Switching for Efficient Graph Processing](https://dl.acm.org/doi/10.1145/3318464.3380590) in Proceedings of the 2020 International Conference on Management of Data (SIGMOD 2020), online conference [Portland, OR, USA], June 14-19, 2020.  
+Tangwei Ying, Hanhua Chen, Hai Jin. [Pensieve: Skewness-Aware Version Switching for Efficient Graph Processing](https://dl.acm.org/doi/10.1145/3318464.3380590). in Proceedings of the 2020 International Conference on Management of Data (SIGMOD 2020), Portland, OR, USA, June 14-19, 2020.  
 ([bibtex](https://github.com/CGCL-codes/Pensieve/blob/master/Pensieve.bib))
 
 
