@@ -5,7 +5,7 @@
 #include <unordered_set>
 #include "vertex.h"
 #include "myutil.h"
-#include "threadpool.h"
+// #include "threadpool.h"
 
 using namespace std;
 
@@ -43,7 +43,7 @@ uintT bin_search(vector<uintT> &arr, uintT target) {
   return start;
 }
 
-mutex mtx;
+// mutex mtx;
 
 template <class vertex>
 struct delta_log{

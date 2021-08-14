@@ -6,7 +6,7 @@
 #include "vertex.h"
 #include "quickSort.h"
 #include <cstdlib>
-#include <get_mem.h>
+#include "get_mem.h"
 #include <unordered_map>
 #include "delta_log.h"
 
