@@ -41,7 +41,7 @@ PCC = g++
 PCFLAGS = -std=c++14 -O3 -lpthread -g $(INTT) $(INTE) $(CODE) $(PD) $(MEM)
 endif
 
-COMMON= threadpool.h copyed_array.h delta_log.h big_delta.h version_graph.h myutil.h get_mem.h exp_distribution.h delta.h ligra.h graph.h compressedVertex.h vertex.h utils.h IO.h parallel.h gettime.h index_map.h maybe.h sequence.h edgeMap_utils.h binary_search.h quickSort.h blockRadixSort.h transpose.h parseCommandLine.h byte.h byteRLE.h nibble.h byte-pd.h byteRLE-pd.h nibble-pd.h vertexSubset.h 
+COMMON= copyed_array.h delta_log.h big_delta.h version_graph.h myutil.h get_mem.h exp_distribution.h delta.h ligra.h graph.h compressedVertex.h vertex.h utils.h IO.h parallel.h gettime.h index_map.h maybe.h sequence.h edgeMap_utils.h binary_search.h quickSort.h blockRadixSort.h transpose.h parseCommandLine.h byte.h byteRLE.h nibble.h byte-pd.h byteRLE-pd.h nibble-pd.h vertexSubset.h 
 
 # ALL= BFS Components BellmanFord PageRank MIS KCore Radii BC 
 # ALL= BellmanFord PageRank Components
